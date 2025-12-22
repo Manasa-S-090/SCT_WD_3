@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tic‑Tac‑Toe — Play vs Friend or Computer</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --accent:#7c3aed; --muted:#94a3b8; --win:#16a34a;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto, "Helvetica Neue", Arial; background:linear-gradient(135deg,#071028 0%, #0b1220 100%); color:#e6eef8; display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+    .container{width:100%;max-width:920px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.04)); border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(2,6,23,0.6);}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+    .title{display:flex;gap:12px;align-items:center}
+    .logo{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#06b6d4);display:flex;align-items:center;justify-content:center;font-weight:700}
+    h1{margin:0;font-size:20px}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:10px;cursor:pointer;color:var(--muted)}
+    .btn.primary{background:linear-gradient(90deg,var(--accent),#06b6d4);color:white;border:0}
+    .btn:focus{outline:2px solid rgba(124,58,237,0.18)}
+
+    .main{display:grid;grid-template-columns:360px 1fr;gap:20px}
+    .board-wrap{display:flex;flex-direction:column;gap:12px;align-items:center}
+    .board{width:360px;height:360px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:8px;padding:12px;border-radius:12px}
+    .cell{background:rgba(255,255,255,0.02);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:700;cursor:pointer;user-select:none;transition:transform .12s ease, background .12s}
+    .cell:hover{transform:translateY(-4px)}
+    .cell.disabled{cursor:not-allowed;opacity:.8}
+    .status{font-size:16px;color:var(--muted);min-height:28px}
+
+    .panel{padding:14px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));}
+    .section{margin-bottom:12px}
+    .modes{display:flex;gap:8px}
+    .pick{display:flex;gap:8px;align-items:center}
+    label{cursor:pointer}
+
+    .history{display:flex;gap:8px;flex-wrap:wrap}
+    .small{font-size:13px;color:var(--muted)}
+
+    .win-line{position:absolute;pointer-events:none}
+    .footer{display:flex;align-items:center;justify-content:space-between;margin-top:14px;color:var(--muted);font-size:13px}
+
+    /* highlight for winning cells */
+    .cell.win{background:linear-gradient(90deg, rgba(22,163,74,0.12), rgba(124,58,237,0.06));box-shadow:0 6px 20px rgba(2,6,23,0.6) inset;}
+
+    @media (max-width:800px){
+      .main{grid-template-columns:1fr;}
+      .board{width:100%;height:calc(100vw - 80px);}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <div class="title">
+        <div class="logo">TTT</div>
+        <div>
+          <h1>Tic‑Tac‑Toe</h1>
+          <div class="small">Play against a friend or a smart computer — perfect play implemented.</div>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="newGameBtn" class="btn primary">New Game</button>
+        <button id="resetScoreBtn" class="btn">Reset Score</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="board-wrap">
+        <div style="position:relative" aria-live="polite">
+          <div id="board" class="board" role="grid" aria-label="Tic Tac Toe board"></div>
+        </div>
+        <div class="status" id="status">Choose mode to start</div>
+      </div>
+
+      <div class="panel">
+        <div class="section">
+          <div class="small">Mode</div>
+          <div class="modes" role="radiogroup" aria-label="Game mode">
+            <label class="pick"><input type="radio" name="mode" value="pvp"> Two Players</label>
+            <label class="pick"><input type="radio" name="mode" value="pvc" checked> Vs Computer</label>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="small">Choose your mark</div>
+          <div class="modes">
+            <label class="pick"><input type="radio" name="mark" value="X" checked> X (goes first)</label>
+            <label class="pick"><input type="radio" name="mark" value="O"> O (goes second)</label>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="small">Scoreboard</div>
+          <div style="display:flex;gap:12px;align-items:center;margin-top:8px">
+            <div class="panel" style="padding:8px;border-radius:8px">Player X: <strong id="scoreX">0</strong></div>
+            <div class="panel" style="padding:8px;border-radius:8px">Player O: <strong id="scoreO">0</strong></div>
+            <div class="panel" style="padding:8px;border-radius:8px">Ties: <strong id="scoreT">0</strong></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="small">History</div>
+          <div class="history" id="history"></div>
+        </div>
+
+        <div class="footer">
+          <div class="small">Tip: click cells to play. Computer uses minimax for perfect play.</div>
+          <div class="small">Made with ❤️</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simple Tic-Tac-Toe with two-player & vs-computer modes. Computer uses minimax for optimal play.
+
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const newGameBtn = document.getElementById('newGameBtn');
+    const resetScoreBtn = document.getElementById('resetScoreBtn');
+    const scoreXEl = document.getElementById('scoreX');
+    const scoreOEl = document.getElementById('scoreO');
+    const scoreTEl = document.getElementById('scoreT');
+    const historyEl = document.getElementById('history');
+
+    let board = Array(9).fill(''); // '', 'X', 'O'
+    let currentPlayer = 'X';
+    let gameMode = 'pvc'; // 'pvc' or 'pvp'
+    let playerMark = 'X'; // what human chooses when vs computer
+    let running = false;
+    let scores = { X:0, O:0, T:0 };
+    let gameCount = 0;
+
+    const lines = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    function renderBoard(){
+      boardEl.innerHTML = '';
+      board.forEach((cell, idx) => {
+        const cellEl = document.createElement('div');
+        cellEl.className = 'cell' + (cell ? ' disabled' : '');
+        cellEl.setAttribute('role','button');
+        cellEl.setAttribute('aria-label', `cell ${idx+1} ${cell || 'empty'}`);
+        cellEl.dataset.index = idx;
+        cellEl.innerHTML = cell ? escapeHtml(cell) : '';
+        cellEl.addEventListener('click', onCellClick);
+        boardEl.appendChild(cellEl);
+      });
+    }
+
+    function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+
+    function onCellClick(e){
+      const idx = Number(e.currentTarget.dataset.index);
+      if(!running) return;
+      if(board[idx]) return;
+      if(gameMode === 'pvc' && currentPlayer !== playerMark) return; // not human's turn
+
+      makeMove(idx, currentPlayer);
+
+      if(gameMode === 'pvc' && running){
+        // computer move after a short pause for UX
+        setTimeout(() => {
+          if(running) computerPlay();
+        }, 250);
+      }
+    }
+
+    function makeMove(idx, mark){
+      if(board[idx] || !running) return;
+      board[idx] = mark;
+      updateStateAfterMove();
+    }
+
+    function updateStateAfterMove(){
+      renderBoard();
+      const result = checkResult();
+      if(result){
+        running = false;
+        if(result.winner){
+          highlightWin(result.line);
+          statusEl.textContent = `Player ${result.winner} wins!`;
+          scores[result.winner]++;
+          addHistory(`Game ${++gameCount}: ${result.winner} won`);
+        } else {
+          statusEl.textContent = `It's a tie!`;
+          scores.T++;
+          addHistory(`Game ${++gameCount}: Tie`);
+        }
+        updateScores();
+      } else {
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        statusEl.textContent = `Turn: ${currentPlayer}`;
+      }
+    }
+
+    function checkResult(){
+      for(const line of lines){
+        const [a,b,c] = line;
+        if(board[a] && board[a] === board[b] && board[a] === board[c]){
+          return { winner: board[a], line };
+        }
+      }
+      if(board.every(Boolean)) return { winner: null };
+      return null;
+    }
+
+    function highlightWin(line){
+      // add class to winning cells
+      const cells = boardEl.querySelectorAll('.cell');
+      line.forEach(i => cells[i].classList.add('win'));
+    }
+
+    // --------- Computer AI (Minimax) ---------
+    function computerPlay(){
+      // choose best move via minimax
+      const ai = playerMark === 'X' ? 'O' : 'X';
+      const best = findBestMove(board.slice(), ai);
+      if(best.index !== undefined){
+        makeMove(best.index, ai);
+      }
+    }
+
+    function findBestMove(boardState, ai){
+      // If center free and board is empty choose center - micro-optimization
+      if(boardState.every(v => !v) && boardState[4] === '') return { index:4 };
+
+      const opponent = ai === 'X' ? 'O' : 'X';
+
+      function minimax(state, player){
+        const res = evaluateState(state);
+        if(res !== null) return res;
+
+        const moves = [];
+        for(let i=0;i<9;i++){
+          if(!state[i]){
+            state[i] = player;
+            const score = minimax(state, player === ai ? opponent : ai);
+            moves.push({ index:i, score });
+            state[i] = '';
+          }
+        }
+
+        // choose max for ai, min for opponent
+        if(player === ai){
+          let best = moves[0];
+          for(const m of moves) if(m.score > best.score) best = m;
+          return best.index === undefined ? null : best.score;
+        } else {
+          let best = moves[0];
+          for(const m of moves) if(m.score < best.score) best = m;
+          return best.index === undefined ? null : best.score;
+        }
+      }
+
+      // top-level select move with best score
+      let bestMove = { index: -1, score: -Infinity };
+      for(let i=0;i<9;i++){
+        if(!boardState[i]){
+          boardState[i] = ai;
+          const score = minimax(boardState, opponent);
+          boardState[i] = '';
+          if(score > bestMove.score){
+            bestMove = { index:i, score };
+          }
+        }
+      }
+      return bestMove;
+    }
+
+    function evaluateState(state){
+      // returns +10 if 'X' wins, -10 if 'O' wins, 0 tie, null if ongoing
+      for(const line of lines){
+        const [a,b,c] = line;
+        if(state[a] && state[a] === state[b] && state[a] === state[c]){
+          return state[a] === 'X' ? 10 : -10;
+        }
+      }
+      if(state.every(Boolean)) return 0;
+      return null;
+    }
+
+    // --------- UI & Controls ---------
+    function applySettings(){
+      const mode = document.querySelector('input[name="mode"]:checked').value;
+      const mark = document.querySelector('input[name="mark"]:checked').value;
+      gameMode = mode;
+      playerMark = mark;
+    }
+
+    function startNewGame(){
+      applySettings();
+      board = Array(9).fill('');
+      currentPlayer = 'X';
+      running = true;
+      clearWinHighlights();
+      renderBoard();
+      statusEl.textContent = `Turn: ${currentPlayer}`;
+
+      // if vs computer and computer goes first
+      if(gameMode === 'pvc' && playerMark !== currentPlayer){
+        // computer starts
+        setTimeout(() => { if(running) computerPlay(); }, 200);
+      }
+    }
+
+    function clearWinHighlights(){
+      // remove any .win classes
+      const cells = boardEl.querySelectorAll('.cell');
+      cells.forEach(c => c.classList.remove('win'));
+    }
+
+    function updateScores(){
+      scoreXEl.textContent = scores.X;
+      scoreOEl.textContent = scores.O;
+      scoreTEl.textContent = scores.T;
+    }
+
+    function addHistory(text){
+      const el = document.createElement('div');
+      el.className = 'panel';
+      el.style.padding='6px 8px';
+      el.style.borderRadius='8px';
+      el.textContent = text;
+      historyEl.prepend(el);
+      // keep small history
+      while(historyEl.children.length > 6) historyEl.removeChild(historyEl.lastChild);
+    }
+
+    // Reset scoreboard
+    resetScoreBtn.addEventListener('click', ()=>{
+      scores = { X:0, O:0, T:0 };
+      updateScores();
+      addHistory('Scores reset');
+    });
+
+    newGameBtn.addEventListener('click', ()=> startNewGame());
+
+    // keyboard accessibility: number keys 1-9 map to cells
+    window.addEventListener('keydown', (e)=>{
+      if(!running) return;
+      const key = e.key;
+      if(key >= '1' && key <= '9'){
+        const idx = Number(key)-1;
+        // map 1..9 to board positions (left-to-right top-to-bottom)
+        // emulating clicks
+        const cells = boardEl.querySelectorAll('.cell');
+        if(cells[idx]) cells[idx].click();
+      }
+    });
+
+    // mode/mark change triggers a new game
+    document.querySelectorAll('input[name="mode"]').forEach(r=>r.addEventListener('change', startNewGame));
+    document.querySelectorAll('input[name="mark"]').forEach(r=>r.addEventListener('change', startNewGame));
+
+    // initial render
+    renderBoard();
+    updateScores();
+
+    // start first game automatically
+    startNewGame();
+  </script>
+</body>
+</html>
